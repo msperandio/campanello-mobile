@@ -1,0 +1,279 @@
+/**
+ * Sample React Native App
+ * https://github.com/facebook/react-native
+ *
+ * @format
+ * @flow strict-local
+ */
+
+import React from 'react';
+import type {Node} from 'react';
+import {
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  useColorScheme,
+  View,
+  Dimensions,
+  TouchableOpacity
+} from 'react-native';
+
+import {
+  RTCPeerConnection,
+  RTCIceCandidate,
+  RTCSessionDescription,
+  RTCView,
+  MediaStream,
+  MediaStreamTrack,
+  mediaDevices,
+  registerGlobals
+} from 'react-native-webrtc';
+
+import {
+  Colors,
+  DebugInstructions,
+  Header,
+  LearnMoreLinks,
+  ReloadInstructions,
+} from 'react-native/Libraries/NewAppScreen';
+
+import io from 'socket.io-client'
+
+const dimensions = Dimensions.get('window')
+
+class App extends React.Component {
+  constructor(props){
+    super(props)
+    this.status = {
+        localStream: null,
+        remoteStream: null,
+    }
+    this.sdp
+    this.socket = null
+    this.candidates = []
+
+  }
+
+  componentDidMount = () => {
+    this.socket = io.connect(
+        'ws://192.168.0.7:8443',
+        {
+            path: 'io/doorbell',
+            query: {}
+        }
+    )
+    this.socket.on('connection-success',success => {
+        console.log(success)
+        }
+    )
+
+    this.socket.on('offerOrAnswer',(sdp) => {
+            this.sdp = JSON.stringify(sdp)
+            this.pc.setRemoteDescription(new RTCSessionDescription)
+        }
+    )
+
+    this.socket.on('candidate',(candidate) => {
+            this.pc.addIceCandidate(new RTCIceCandidate(candidate))
+        }
+    )
+
+    const pc_config = {
+        "iceServers":[
+            {},
+            { urls: '192.168.0.7:3478'}
+        ]
+    }
+
+    this.pc = new RTCPeerConnection(pc_config)
+
+    this.pc.onicecandidate = (e) => {
+        if(e.candiate){
+            this.sendToPeer('candiate',e.candiate)
+        }
+    }
+
+    this.pc.oniceconnectionstatechange = (e) => {
+        console.log(e)
+    }
+
+    this.pc.onaddstream = (e) => {
+        debugger
+        this.setState(
+            {remoteStream: e.stream}
+        )
+    }
+
+    const success = (stream) => {
+        this.setState(
+            {localStream: stream}
+        )
+        this.pc.addStream(stream)
+    }
+
+    const failure = (e) => {
+        console.log('getUserMedia Error: ,',e)
+    }
+
+    let isFront = true;
+    mediaDevices.enumerateDevices().then(sourceInfos => {
+      console.log(sourceInfos);
+      let videoSourceId;
+      for (let i = 0; i < sourceInfos.length; i++) {
+        const sourceInfo = sourceInfos[i];
+        if(sourceInfo.kind == "videoinput" && sourceInfo.facing == (isFront ? "front" : "environment")) {
+          videoSourceId = sourceInfo.deviceId;
+        }
+      }
+
+      const constraints = {
+        audio: true,
+        video: {
+            mandatory: {
+                minWidth: 500,
+                minEight: 300,
+                minFrameRate: 15,
+
+            }
+        },
+        facingMode: (isFront ? "user":"environment"),
+        optional: (videoSourceId ? [{sourceId: videoSourceId}]:[])
+      }
+
+      mediaDevices.getUserMedia(constraints)
+      .then(success)
+      .catch(failure);
+    });
+  }
+
+    sendToPeer = (messageType, payload) => {
+        this.socket.emit(
+            messageType,
+            {
+                socketID: this.socket.id,
+                payload
+            }
+        )
+    }
+
+    createOffer = () => {
+        console.log("Offer")
+        this.pc.createOffer({offerToReceiveVideo: 1})
+            .then(
+                sdp => {
+                    this.pc.setLocalDescription(sdp)
+                    this.sendToPeer('offerOrAnswer',sdp)
+                }
+            )
+    }
+
+    createOffer = () => {
+        console.log("Answer")
+        this.pc.createAnswer({offerToReceiveVideo: 1})
+            .then( sdp => {
+                    this.pc.setLocalDescription(sdp)
+                    this.sendToPeer('offerOrAnswer',sdp)
+                }
+            )
+    }
+
+    setRemoteDescription = () => {
+        const desc = JSON.parse(this.sdp)
+        this.pc.setRemoteDescription(new RTCSessionDescription)
+    }
+
+    addCandidate = () => {
+        this.candidates.foreach(candidate=>{
+            console.log(JSON.stringify(candidate))
+            this.pc.addIceCandidate(new RTCIceCandidate(candidate))
+        });
+    }
+
+
+  render() {
+    const {
+        localStream,
+        remoteStream,
+    } = this.state
+
+    return(
+        <SafeAreaView style={{flex: 1,}}>
+            <View style={{...styles.buttonsContainer}}>
+                <View style={{flex: 1,}}>
+                    <TouchableOpacity onPress ={this.createOffer}>
+                        <View style={styles.button}>
+                            <Text style={{...styles.textContent}}>
+                            Call
+                            </Text>
+                        </View>
+                    </TouchableOpacity>
+                </View>
+                <View style={{flex: 1,}}>
+                    <TouchableOpacity onPress ={this.createAnswer}>
+                        <View style={styles.button}>
+                            <Text style={{...styles.textContent}}>
+                            Answer
+                            </Text>
+                        </View>
+                    </TouchableOpacity>
+                </View>
+            </View>
+            <View style={{...styles.videoContainer}}>
+                <View style={{
+                    position: 'absolute',
+                    width: 100,
+                    height: 200,
+                    bottom: 10,
+                    right: 10,
+                    zIndex: 1000,
+                }}>
+                    <View style={{flex: 1,}}>
+                        <TouchableOpacity onPress ={() => localStream._tracks[1]._switchCamera()}>
+                            <View>
+                                <RTCView
+                                    key={1}
+                                    zOrder={0}
+                                    objectFit='cover'
+                                    style={{...styles.rtcView}}
+                                    streamUrl= {localStream && localStream.toURL()}
+                                />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </View>
+        </SafeAreaView>
+    );
+  }
+};
+
+const styles = StyleSheet.create({
+    buttonsContainer: {
+        flexDirection: 'row',
+    },
+    button: {
+        margin: 5,
+        paddingVertical: 10,
+        backgroundColor: "lightgrey",
+        borderRadius: 5,
+    },
+    textContent: {
+        fontFamily: 'Avenir',
+        fontSize: 20,
+        textAlign: 'center',
+    },
+    videoContainer: {
+        flex: 1,
+        flexDirection: 'row',
+        justifyContent: 'center',
+    },
+    rtcView: {
+        width: 100,
+        height: 200,
+        backgroundColor: "black",
+    },
+});
+
+export default App;

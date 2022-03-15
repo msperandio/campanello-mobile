@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "1013932984840",
+    "project_id": "quantum-hash-317509",
+    "storage_bucket": "quantum-hash-317509.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1013932984840:android:524d4b6cd8327591ac1fbd",
+        "android_client_info": {
+          "package_name": "com.campanello"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1013932984840-kj529qvpqqvqhvggivmb3eduan9uf4n3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBaYyYVhfr9F6aZHwJMCY-TiJF-ord36zA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1013932984840-kj529qvpqqvqhvggivmb3eduan9uf4n3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
