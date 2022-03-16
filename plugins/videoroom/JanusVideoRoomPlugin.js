@@ -407,7 +407,7 @@ export default class JanusVideoRoomPlugin extends JanusPlugin {
           request: "configure",
           audio: audio,
           video: video,
-          bitrate: 128 * 1000,
+          bitrate: 64 * 1000,
         },
         {
           type: offer.type,

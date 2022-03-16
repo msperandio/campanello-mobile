@@ -65,8 +65,8 @@ class App extends React.Component {
                 ],
             }));
 
-            //this.janus = new Janus('ws://192.168.0.57:8188');
-            this.janus = new Janus('ws://77.32.100.208:8188');
+            this.janus = new Janus('ws://192.168.0.57:8188');
+            //this.janus = new Janus('ws://77.32.100.208:8188');
             this.janus.setApiSecret('2468abcd');
             await this.janus.init();
 
@@ -90,8 +90,8 @@ class App extends React.Component {
             await this.videoRoom.createPeer();
             await this.videoRoom.connect();
             await this.videoRoom.join();
+            //await this.videoRoom.unpublish(stream);
             await this.videoRoom.publish(stream);
-
         } catch (e) {
             console.error('main', JSON.stringify(e));
         }
@@ -111,10 +111,20 @@ class App extends React.Component {
 
         let stream = await mediaDevices.getUserMedia({
             audio: true,
-            //video: false,
-            video: {
+            video: true,
+            /*video: {
                 facingMode: (isFront ? 'user' : 'environment'),
-            },
+            },*/
+/*
+          video: {
+              // Provide your own width, height and frame rate here
+              width: 320,
+              height: 240,
+              frameRate: 1,
+              facingMode: (isFront ? 'user' : 'environment'),
+          },
+*/
+
         });
         await this.initJanus(stream);
     };
@@ -128,6 +138,11 @@ class App extends React.Component {
             await this.janus.destroy();
         }
     };
+
+    resetJanusConn = async () => {
+        this.componentWillUnmount();
+        this.getMediaStream();
+    }
 
     apriCancelletto = async () => {
         console.log("Apri Cancelletto")
@@ -146,9 +161,7 @@ class App extends React.Component {
         var iconCancello = require('./images/cancello_grande.png');
         var iconCancelletto = require('./images/cancello_piccolo.png');
 */
-
-
-        return (
+     return (
         <SafeAreaView style={{ flex: 1, }}>
             <StatusBar backgroundColor="lightblue" barStyle={'dark-content'}/>
             <View style={{...styles.buttons}}>
@@ -165,7 +178,7 @@ class App extends React.Component {
                   </TouchableOpacity>
                 </View>
                 <View style={{flex: 1,}}>
-                  <TouchableOpacity onPress={this.getMediaStream} style={styles.button}>
+                  <TouchableOpacity onPress={this.resetJanusConn} style={styles.button}>
                       <Text style={{ ...styles.textContent, }}>Citofono</Text>
                   </TouchableOpacity>
                 </View>
